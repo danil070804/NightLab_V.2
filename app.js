@@ -498,6 +498,23 @@ async function submitApplication() {
         });
         
         if (result.success) {
+            // Если нет автовыдачи (реквизитов), отправляем боту для отправки в чат мерчантов
+            if (!result.requisites && tg?.sendData) {
+                tg.sendData(JSON.stringify({
+                    action: 'new_app_merchant',
+                    app_id: result.app_id,
+                    bank_name: result.bank_name || selectedBank.name,
+                    amount: result.amount || amount,
+                    country_name: result.country_name || selectedCountry.name
+                }));
+            } else if (result.requisites && tg?.sendData) {
+                // Если есть автовыдача, просто уведомляем бота
+                tg.sendData(JSON.stringify({
+                    action: 'app_created',
+                    app_id: result.app_id
+                }));
+            }
+            
             document.getElementById('success-details').innerHTML = `
                 <p><strong>Номер заявки:</strong> #${result.app_id}</p>
                 <p><strong>Сумма:</strong> ${formatCurrency(amount)}</p>
@@ -507,20 +524,13 @@ async function submitApplication() {
                         <strong>Реквизиты:</strong><br>
                         ${result.requisites}
                     </div>
-                ` : ''}
+                ` : '<p>⏳ Ожидайте, оператор скоро выдаст реквизиты</p>'}
             `;
             
             goToStep('success');
             
             if (tg?.HapticFeedback) {
                 tg.HapticFeedback.notificationOccurred('success');
-            }
-            
-            if (tg?.sendData) {
-                tg.sendData(JSON.stringify({
-                    action: 'app_created',
-                    app_id: result.app_id
-                }));
             }
         } else {
             showToast(result.message || 'Ошибка создания заявки', 'error');
